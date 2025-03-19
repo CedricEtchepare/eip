@@ -1,9 +1,13 @@
 npm install
+
 docker compose up -d 
+
 docker-compose logs -f "nom du service docker" // pour voir les messages passer
 
 lancer postman et faire un post sur : http://localhost:9001/send
+
 cocher Content-Type -> application/json
+
 body : 
 {
   "resourceType": "Bundle",

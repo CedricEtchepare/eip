@@ -8,6 +8,7 @@ lancer postman et faire un post sur : http://localhost:9001/send
 
 cocher Content-Type -> application/json
 
+```bash
 body : 
 {
   "resourceType": "Bundle",
@@ -32,4 +33,4 @@ body :
     }
   ]
 }
-
+```

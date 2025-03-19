@@ -1,0 +1,15 @@
+{
+    "patients": [
+      {
+        "id": "12345",
+        "insurance": "Gold Plan",
+        "medicalHistory": ["Diabetes", "Asthma"]
+      },
+      {
+        "id": "67890",
+        "insurance": "Silver Plan",
+        "medicalHistory": ["Hypertension"]
+      }
+    ]
+  }
+  

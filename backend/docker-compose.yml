@@ -1,0 +1,115 @@
+services:
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: "rabbitmq"
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+
+  consumer_laboratory:
+    build:
+      context: .
+      dockerfile: services/consumer/consumer.Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_NAME=queue_laboratory
+
+  consumer_radiology:
+    build:
+      context: .
+      dockerfile: services/consumer/consumer.Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_NAME=queue_radiology
+
+  consumer_cardiology:
+    build:
+      context: .
+      dockerfile: services/consumer/consumer.Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_NAME=queue_cardiology
+
+  router:
+    build:
+      context: .
+      dockerfile: services/router/router.Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_INPUT=enriched_records
+      - QUEUE_LAB=queue_laboratory
+      - QUEUE_RADIOLOGY=queue_radiology
+      - QUEUE_CARDIO=queue_cardiology
+
+  json-server:
+    build:
+      context: .
+      dockerfile: ./database/json-server.Dockerfile
+    container_name: "json-server"
+    restart: always
+    volumes:
+      - ./database/db.json:/data/db.json
+    ports:
+      - "3005:3005"
+    command: ["json-server", "--watch", "/data/db.json", "--host", "0.0.0.0", "--port", "3005"]
+
+  producer:
+    build:
+      context: .
+      dockerfile: services/producer/producer.Dockerfile
+    ports:
+      - "9001:9000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_NAME=fhir_records
+
+  transformer:
+    build:
+      context: .
+      dockerfile: services/transformer/transformer.Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_INPUT=fhir_records
+      - QUEUE_OUTPUT=transformed_records
+
+  enricher:
+    build:
+      context: .
+      dockerfile: services/enricher/enricher.Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      json-server:
+        condition: service_started
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - QUEUE_INPUT=transformed_records
+      - QUEUE_OUTPUT=enriched_records
+      - API_URL=http://json-server:3005/patients
